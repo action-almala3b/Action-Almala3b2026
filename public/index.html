@@ -140,9 +140,10 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 .waiting-msg { color:rgba(255,255,255,0.35); font-size:14px; letter-spacing:1px; }
 
 /* GAME */
-#game { display:none; flex-direction:column; width:100%; height:100%; overflow:hidden; position:relative; background:#111; }
+#game { display:none; flex-direction:column; width:100%; height:100%; overflow:hidden; background:#111; }
 #game.active { display:flex; }
-/* خلفية الملعب تغطي كل الشاشة */
+
+/* الخلفية داخل field-area فقط — ما تطلعش على كروت اليد */
 #pitch-bg {
   position:absolute; inset:0; width:100%; height:100%;
   background-image: url('images/pitch.png');
@@ -153,7 +154,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 .top-bar { display:flex; justify-content:space-between; align-items:center; padding:4px 10px; background:rgba(0,0,0,0.55); border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0; z-index:10; position:relative; }
 .turn-badge { background:rgba(0,229,255,0.2); border:1px solid #00e5ff; border-radius:20px; padding:3px 12px; font-size:11px; color:#00e5ff; }
 .top-name { font-size:11px; color:rgba(255,255,255,0.5); }
-.main-layout { flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column; z-index:1; }
+.main-layout { flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column; z-index:1; min-height:0; }
 
 /* خصم فوق */
 .opp-top { flex-shrink:0; background:transparent; border-bottom:none; padding:5px 50px; }
@@ -347,14 +348,16 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 
 <!-- GAME -->
 <div id="game" class="screen">
-  <!-- خلفية الملعب -->
-  <div id="pitch-bg"></div>
-
+  <!-- خلفية الملعب — داخل main-layout فقط، ما تغطيش كروت اليد -->
   <div class="top-bar">
     <div class="turn-badge" id="turnIndicator">Your Turn ⚡</div>
     <div class="top-name" id="topName">👤 You</div>
   </div>
-  <div class="main-layout">
+
+  <!-- منطقة الملعب — الخلفية هنا بس -->
+  <div class="main-layout" style="position:relative;">
+    <div id="pitch-bg"></div>
+
     <!-- For 3-4 players: old layout areas -->
     <div class="opp-top" id="opp-top-area" style="display:none;"></div>
     <div class="opp-right" id="opp-right-area" style="display:none"><div class="opp-right-inner" id="opp-right-inner"></div></div>
@@ -379,7 +382,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 
       <!-- لا يوجد خط مضاف — الخلفية نفسها فيها الخط الأبيض -->
 
-      <!-- نصف الشاشة السفلي — أنا (ATK/MID/DEF فقط، الحارس تحت منفصل) -->
+      <!-- نصف الشاشة السفلي — أنا (ATK/MID/DEF فقط، الحارس تحت منفصل في منطقة الجزاء) -->
       <div id="my-formation-half" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0 0 2px;min-height:0;">
         <!-- ATK قريب من خط المنتصف (الجزء الدائري السفلي) -->
         <div class="form-row" id="my-row-ATK" style="flex:1;min-height:0;overflow:hidden;max-height:60px;"></div>
@@ -387,7 +390,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
         <div class="form-row" id="my-row-DEF" style="flex:1;min-height:0;overflow:hidden;"></div>
       </div>
 
-      <!-- منطقة الحارس في منطقة الجزاء — فوق action-bar مباشرة -->
+      <!-- منطقة الحارس في منطقة الجزاء — آخر جزء من الخلفية قبل الـ action-bar -->
       <div id="my-gk-row" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:2px 6px;min-height:60px;">
         <!-- كروت المحروقة — أقصى اليسار موازية لمنطقة الحارس -->
         <div id="burned-zone" style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;max-width:44px;">
@@ -442,22 +445,22 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
         <button class="abtn abtn-end" id="endTurnBtn2" onclick="endTurn()" disabled>✅ End Turn</button>
       </div>
     </div>
+  </div><!-- end main-layout -->
 
-    <!-- Action bar فوق كروت اليد — للـ 2-player -->
-    <div id="action-bar-2p" style="flex-shrink:0;background:rgba(0,0,0,0.65);padding:3px 8px;display:none;gap:6px;align-items:center;justify-content:center;border-top:1px solid rgba(255,255,255,0.12);">
-      <!-- زر سحب -->
-      <button id="deckPile" onclick="drawCard()" style="padding:5px 10px;border-radius:7px;border:1.5px solid rgba(0,229,255,0.5);background:rgba(0,20,40,0.8);color:#00e5ff;font-family:Orbitron,sans-serif;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;transition:opacity 0.2s;">
-        <span id="deckCount">?</span>
-        <span id="deckHint" style="font-size:9px;opacity:0.7;">🃏 Draw</span>
-      </button>
-      <!-- زر إنهاء الدور -->
-      <button class="abtn abtn-end" id="endTurnBtn" onclick="endTurn()" disabled style="font-size:11px;padding:5px 14px;">✅ End Turn</button>
-    </div>
-
-    <!-- كروت اليد دايماً في الأسفل -->
-    <div class="hand-area" id="myHand" style="flex-shrink:0;"></div>
-    <div class="name-bar" id="myNameBar">👤 You</div>
+  <!-- Action bar للـ 2-player — خارج main-layout فوق كروت اليد مباشرة -->
+  <div id="action-bar-2p" style="flex-shrink:0;background:rgba(0,0,0,0.75);padding:4px 8px;display:none;gap:6px;align-items:center;justify-content:center;border-top:1px solid rgba(255,255,255,0.15);">
+    <!-- زر سحب -->
+    <button id="deckPile" onclick="drawCard()" style="padding:6px 12px;border-radius:8px;border:1.5px solid rgba(0,229,255,0.5);background:rgba(0,20,40,0.9);color:#00e5ff;font-family:Orbitron,sans-serif;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;transition:opacity 0.2s;">
+      <span id="deckCount">?</span>
+      <span id="deckHint" style="font-size:9px;opacity:0.8;">🃏 Draw</span>
+    </button>
+    <!-- زر إنهاء الدور -->
+    <button class="abtn abtn-end" id="endTurnBtn" onclick="endTurn()" disabled style="font-size:12px;padding:6px 16px;">✅ End Turn</button>
   </div>
+
+  <!-- كروت اليد — خارج main-layout في الأسفل -->
+  <div class="hand-area" id="myHand" style="flex-shrink:0;"></div>
+  <div class="name-bar" id="myNameBar">👤 You</div>
 </div>
 
 <!-- ZONE POPUP -->
