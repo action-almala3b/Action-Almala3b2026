@@ -156,17 +156,17 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 .main-layout { flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column; z-index:1; }
 
 /* خصم فوق */
-.opp-top { flex-shrink:0; background:rgba(255,0,80,0.04); border-bottom:1px solid rgba(255,255,255,0.07); padding:5px 50px; }
+.opp-top { flex-shrink:0; background:transparent; border-bottom:none; padding:5px 50px; }
 
-/* خصم يمين */
-.opp-right { position:absolute; right:0; top:0; bottom:0; width:46px; background:rgba(255,165,0,0.04); border-left:1px solid rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; z-index:5; }
-.opp-right-inner { transform:rotate(90deg); display:flex; flex-direction:column; align-items:center; gap:3px; }
-.opp-left { position:absolute; left:0; top:0; bottom:0; width:46px; background:rgba(0,255,150,0.04); border-right:1px solid rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; z-index:5; }
-.opp-left-inner { transform:rotate(-90deg); display:flex; flex-direction:column; align-items:center; gap:3px; }
+/* خصم يمين — بدون خلفية أو بوردر، overflow:visible عشان الكروت ما تتحجبش */
+.opp-right { position:absolute; right:0; top:0; bottom:0; width:54px; background:transparent; border-left:none; display:flex; align-items:center; justify-content:center; z-index:5; overflow:visible; }
+.opp-right-inner { transform:rotate(90deg); display:flex; flex-direction:column; align-items:center; gap:3px; overflow:visible; }
+.opp-left { position:absolute; left:0; top:0; bottom:0; width:54px; background:transparent; border-right:none; display:flex; align-items:center; justify-content:center; z-index:5; overflow:visible; }
+.opp-left-inner { transform:rotate(-90deg); display:flex; flex-direction:column; align-items:center; gap:3px; overflow:visible; }
 .opp-name { font-size:9px; color:rgba(255,255,255,0.4); text-align:center; margin-bottom:2px; }
 
 /* وسط */
-.middle-zone { flex:1; margin:0 46px; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+.middle-zone { flex:1; margin:0 54px; display:flex; flex-direction:column; position:relative; overflow:hidden; }
 .center-area { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center; gap:16px; z-index:2; }
 .deck-pile { width:64px; height:88px; background:linear-gradient(135deg,#1a2a4a,#0d1f35); border:2px solid rgba(0,229,255,0.4); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(0,229,255,0.35); flex-shrink:0; cursor:pointer; transition:transform 0.15s; user-select:none; }
 .deck-pile:active { transform:scale(0.95); }
@@ -179,7 +179,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 .discard-label { font-size:7px; color:rgba(255,255,255,0.2); }
 
 /* MY SECTION */
-.my-section { flex-shrink:0; display:flex; flex-direction:column; background:rgba(0,229,255,0.03); border-top:1px solid rgba(255,255,255,0.07); margin:0 46px; }
+.my-section { flex-shrink:0; display:flex; flex-direction:column; background:transparent; border-top:none; margin:0 54px; }
 .my-field-row { display:flex; gap:0; padding:5px 4px 3px; }
 .my-zone-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; padding:0 3px; }
 .my-zone-lbl { font-size:8px; color:rgba(255,255,255,0.25); text-align:center; margin-bottom:2px; }
@@ -363,38 +363,41 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
     <!-- 2-player split screen — fills the pitch image -->
     <div id="two-player-layout" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;">
 
-      <!-- نصف الشاشة العلوي — الخصم -->
-      <div id="opp-formation-half" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:2px 0 2px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 8px 1px;">
+      <!-- نصف الشاشة العلوي — الخصم (GK أعلى، ATK قريب من المنتصف) -->
+      <div id="opp-formation-half" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:2px 0 0;min-height:0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 8px 1px;flex-shrink:0;">
           <div id="oppFormationName" style="font-size:10px;color:rgba(255,255,255,0.9);text-shadow:0 1px 4px rgba(0,0,0,0.9);font-family:Tajawal,sans-serif;font-weight:700;">👤 Opponent</div>
           <div id="oppHandCount" style="font-size:9px;color:rgba(255,255,255,0.7);text-shadow:0 1px 3px #000;">🃏 0</div>
         </div>
-        <div class="form-row" id="opp-row-GK"></div>
-        <div class="form-row" id="opp-row-DEF"></div>
-        <div class="form-row" id="opp-row-MID"></div>
-        <div class="form-row" id="opp-row-ATK"></div>
+        <!-- GK أعلى (بعيد عن الخط)، ATK أسفل (قريب من الخط) -->
+        <div class="form-row" id="opp-row-GK" style="flex:1;min-height:0;overflow:hidden;"></div>
+        <div class="form-row" id="opp-row-DEF" style="flex:1;min-height:0;overflow:hidden;"></div>
+        <div class="form-row" id="opp-row-MID" style="flex:1;min-height:0;overflow:hidden;"></div>
+        <!-- ATK الخصم قريب من خط المنتصف — الجزء الدائري العلوي -->
+        <div class="form-row" id="opp-row-ATK" style="flex:1;min-height:0;overflow:hidden;max-height:60px;"></div>
       </div>
 
-      <!-- خط المنتصف — بدون أي عناصر -->
-      <div style="height:3px;background:rgba(255,255,255,0.35);flex-shrink:0;"></div>
+      <!-- لا يوجد خط مضاف — الخلفية نفسها فيها الخط الأبيض -->
 
-      <!-- نصف الشاشة السفلي — أنا -->
-      <div id="my-formation-half" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:2px 0 2px;">
-        <div class="form-row" id="my-row-ATK"></div>
-        <div class="form-row" id="my-row-MID"></div>
-        <div class="form-row" id="my-row-DEF"></div>
-        <!-- صف GK + منطقة المحروق على يساره -->
-        <div class="form-row" id="my-row-GK-wrapper" style="flex:1;display:flex;align-items:center;justify-content:space-evenly;padding:0 6px;min-height:0;overflow:hidden;">
-          <!-- منطقة الكروت المحروقة والخاصة — يسار الحارس -->
-          <div id="burned-zone" style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:42px;">
-            <div style="font-size:7px;color:rgba(255,100,100,0.9);text-shadow:0 1px 3px #000;text-align:center;font-family:Tajawal,sans-serif;line-height:1;">🔥</div>
-            <div id="burned-stack" style="position:relative;width:38px;height:54px;"></div>
-          </div>
-          <!-- كروت GK -->
-          <div id="my-row-GK" style="display:flex;gap:4px;align-items:center;justify-content:center;flex:1;overflow:hidden;"></div>
-          <!-- spacer يمين عشان الحارس يبقى في المنتصف -->
-          <div style="min-width:42px;"></div>
+      <!-- نصف الشاشة السفلي — أنا (ATK/MID/DEF فقط، الحارس تحت منفصل) -->
+      <div id="my-formation-half" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0 0 2px;min-height:0;">
+        <!-- ATK قريب من خط المنتصف (الجزء الدائري السفلي) -->
+        <div class="form-row" id="my-row-ATK" style="flex:1;min-height:0;overflow:hidden;max-height:60px;"></div>
+        <div class="form-row" id="my-row-MID" style="flex:1;min-height:0;overflow:hidden;"></div>
+        <div class="form-row" id="my-row-DEF" style="flex:1;min-height:0;overflow:hidden;"></div>
+      </div>
+
+      <!-- منطقة الحارس في منطقة الجزاء — فوق action-bar مباشرة -->
+      <div id="my-gk-row" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:2px 6px;min-height:60px;">
+        <!-- كروت المحروقة — أقصى اليسار موازية لمنطقة الحارس -->
+        <div id="burned-zone" style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;max-width:44px;">
+          <div style="font-size:7px;color:rgba(255,100,100,0.9);text-shadow:0 1px 3px #000;text-align:center;font-family:Tajawal,sans-serif;line-height:1;">🔥</div>
+          <div id="burned-stack" style="position:relative;width:38px;height:54px;"></div>
         </div>
+        <!-- الحارس في المنتصف (منطقة الجزاء) -->
+        <div id="my-row-GK" style="display:flex;gap:4px;align-items:center;justify-content:center;flex:1;overflow:hidden;"></div>
+        <!-- spacer لليمين للتوازن -->
+        <div style="min-width:44px;max-width:44px;"></div>
       </div>
     </div>
 
@@ -754,12 +757,26 @@ function updateUILanguage() {
   document.getElementById('startGameBtn').textContent = t('startGameBtn');
   document.getElementById('copyCodeBtn').textContent = t('copyCodeBtn');
   
-  // Game
-  document.getElementById('deckLbl').textContent = t('deckLbl');
-  document.getElementById('discardLabel').textContent = t('discardLabel');
+  // Game — 2-player action bar
   document.getElementById('endTurnBtn').textContent = t('endTurnBtn');
+  const deckHintEl = document.getElementById('deckHint');
+  if(deckHintEl) deckHintEl.textContent = '🃏 '+t('deckHint');
   
-  // Zone labels
+  // Game — 3-4 player elements
+  const deckLblEl = document.getElementById('deckLbl');
+  if(deckLblEl) deckLblEl.textContent = t('deckLbl');
+  const deckHint2El = document.getElementById('deckHint2');
+  if(deckHint2El) deckHint2El.textContent = t('deckHint');
+  const deckLbl2El = document.getElementById('deckLbl2');
+  if(deckLbl2El) deckLbl2El.textContent = t('deckLbl');
+  const discardLabelEl = document.getElementById('discardLabel');
+  if(discardLabelEl) discardLabelEl.textContent = t('discardLabel');
+  const discardLabel2El = document.getElementById('discardLabel2');
+  if(discardLabel2El) discardLabel2El.textContent = t('discardLabel');
+  const endTurnBtn2El = document.getElementById('endTurnBtn2');
+  if(endTurnBtn2El) endTurnBtn2El.textContent = t('endTurnBtn');
+  
+  // Zone labels (3-4p)
   document.getElementById('myGkLabel').textContent = t('GK');
   document.getElementById('myDefLabel').textContent = t('DEF');
   document.getElementById('myMidLabel').textContent = t('MID');
@@ -780,6 +797,10 @@ function updateUILanguage() {
   
   // Error
   document.getElementById('errorOkBtn').textContent = t('errorOk');
+  
+  // RTL/LTR direction
+  document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.lang = currentLang;
 }
 
 // ===== GAME CODE =====
@@ -1056,7 +1077,7 @@ function drawCard(){
 }
 
 function updateDrawCount(){
-  // used for 3-4 player mode via deckPile (not used in 2p mode — handled in renderGame)
+  // used for 2p mode deck button — handled in renderGame too
   const deck=document.getElementById('deckPile');
   const hint=document.getElementById('deckHint');
   const dcEl=document.getElementById('deckCount');
@@ -1066,7 +1087,7 @@ function updateDrawCount(){
     if(hint){
       if(!isMyTurn) hint.textContent='🃏';
       else if(drawnThisTurn>=2) hint.textContent=t('deckHintDrawn');
-      else hint.textContent='🃏 Draw';
+      else hint.textContent='🃏 '+t('deckHint');
     }
   }
 }
@@ -1074,7 +1095,13 @@ function updateDrawCount(){
 function updateDrawCount2(){
   const el=document.getElementById('drawCount2');
   if(el) el.textContent=t('drawCount',drawnThisTurn);
-  // deckPile2/deckPile share same onclick so no extra logic needed
+  // تحديث hint الـ deck في 3-4 لاعبين
+  const hint2=document.getElementById('deckHint2');
+  if(hint2){
+    if(!isMyTurn) hint2.textContent=t('deckLbl');
+    else if(drawnThisTurn>=2) hint2.textContent=t('deckHintDrawn');
+    else hint2.textContent=t('deckHint');
+  }
 }
 
 function endTurn() {
@@ -1112,16 +1139,19 @@ function renderGame(){
     document.getElementById('my-section-old').style.display='none';
 
     const endBtn=document.getElementById('endTurnBtn');
-    if(endBtn) endBtn.disabled=!isMyTurn||turnEnded;
+    if(endBtn){
+      endBtn.disabled=!isMyTurn||turnEnded;
+      endBtn.textContent=t('endTurnBtn');
+    }
     // update deck count display
     const dc=document.getElementById('deckCount');
     if(dc) dc.textContent=deckCount;
-    // update draw hint
+    // update draw hint (عربي أو انجليزي)
     const hint=document.getElementById('deckHint');
     if(hint){
       if(!isMyTurn){ hint.textContent='🃏'; }
       else if(drawnThisTurn>=2){ hint.textContent=t('deckHintDrawn'); }
-      else { hint.textContent='🃏 Draw'; }
+      else { hint.textContent='🃏 '+t('deckHint'); }
     }
     // disable deck if drawn 2
     const dp=document.getElementById('deckPile');
@@ -1139,7 +1169,10 @@ function renderGame(){
     document.getElementById('my-section-old').style.display='';
 
     const endBtn2=document.getElementById('endTurnBtn2');
-    if(endBtn2) endBtn2.disabled=!isMyTurn||turnEnded;
+    if(endBtn2){
+      endBtn2.disabled=!isMyTurn||turnEnded;
+      endBtn2.textContent=t('endTurnBtn');
+    }
     updateDrawCount2();
     renderDiscard();
     renderMyField();
