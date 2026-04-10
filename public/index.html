@@ -140,12 +140,20 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 .waiting-msg { color:rgba(255,255,255,0.35); font-size:14px; letter-spacing:1px; }
 
 /* GAME */
-#game { display:none; flex-direction:column; width:100%; height:100%; overflow:hidden; position:relative; background:#1a5c1a; }
+#game { display:none; flex-direction:column; width:100%; height:100%; overflow:hidden; position:relative; background:#111; }
 #game.active { display:flex; }
-.top-bar { display:flex; justify-content:space-between; align-items:center; padding:4px 10px; background:rgba(0,0,0,0.45); border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0; z-index:10; }
+/* خلفية الملعب تغطي كل الشاشة */
+#pitch-bg {
+  position:absolute; inset:0; width:100%; height:100%;
+  background-image: url('images/pitch.png');
+  background-size: cover; background-position: center center;
+  background-repeat: no-repeat;
+  z-index:0; pointer-events:none;
+}
+.top-bar { display:flex; justify-content:space-between; align-items:center; padding:4px 10px; background:rgba(0,0,0,0.55); border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0; z-index:10; position:relative; }
 .turn-badge { background:rgba(0,229,255,0.2); border:1px solid #00e5ff; border-radius:20px; padding:3px 12px; font-size:11px; color:#00e5ff; }
 .top-name { font-size:11px; color:rgba(255,255,255,0.5); }
-.main-layout { flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.main-layout { flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column; z-index:1; }
 
 /* خصم فوق */
 .opp-top { flex-shrink:0; background:rgba(255,0,80,0.04); border-bottom:1px solid rgba(255,255,255,0.07); padding:5px 50px; }
@@ -267,21 +275,22 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 
 /* Formation rows — كروت موزعة بالعرض */
 .form-row { display:flex; gap:4px; align-items:center; justify-content:space-evenly; flex:1; min-height:0; overflow:hidden; padding:0 6px; }
-.form-card { width:38px; height:54px; border-radius:5px; position:relative; overflow:hidden; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.25); cursor:pointer; transition:transform 0.1s; box-shadow:0 2px 6px rgba(0,0,0,0.5); }
+.form-card { width:38px; height:54px; border-radius:5px; position:relative; overflow:hidden; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.3); cursor:pointer; transition:transform 0.1s; box-shadow:0 2px 8px rgba(0,0,0,0.7); }
 .form-card:active { transform:scale(0.93); }
-.form-card.selected-form { border-color:#00e5ff !important; box-shadow:0 0 12px rgba(0,229,255,0.7); }
-.form-card.captain-card { border-color:rgba(255,215,0,0.9) !important; box-shadow:0 0 8px rgba(255,215,0,0.4); }
-.form-drop { width:38px; height:54px; border:1.5px dashed rgba(255,255,255,0.2); border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:18px; color:rgba(255,255,255,0.2); flex-shrink:0; cursor:pointer; }
-.form-drop:active { border-color:rgba(0,229,255,0.7); color:rgba(0,229,255,0.5); }
+.form-card.selected-form { border-color:#00e5ff !important; box-shadow:0 0 12px rgba(0,229,255,0.8); }
+.form-card.captain-card { border-color:rgba(255,215,0,0.9) !important; box-shadow:0 0 8px rgba(255,215,0,0.5); }
+.form-drop { width:38px; height:54px; border:1.5px dashed rgba(255,255,255,0.25); border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:18px; color:rgba(255,255,255,0.25); flex-shrink:0; cursor:pointer; background:rgba(0,0,0,0.15); }
+.form-drop:active { border-color:rgba(0,229,255,0.8); color:rgba(0,229,255,0.6); }
 
-/* Pitch halves */
-#opp-formation-half { position:relative; }
-#my-formation-half  { position:relative; }
+/* Halves are transparent — pitch image shows through */
+#opp-formation-half, #my-formation-half { background:transparent !important; }
 
-/* Pitch SVG background drawn via JS — shown as absolute behind everything */
-#pitch-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; }
-#opp-formation-half > *:not(#pitch-svg-opp),
-#my-formation-half  > *:not(#pitch-svg-my) { position:relative; z-index:1; }
+/* Burned zone stack */
+#burned-stack .bcard { position:absolute; top:0; left:0; width:38px; height:54px; border-radius:5px; overflow:hidden; border:1.5px solid rgba(255,80,80,0.6); box-shadow:0 2px 6px rgba(0,0,0,0.7); }
+
+/* Action bar 2p */
+#action-bar-2p { display:none; }
+#deckPile.drawn2 { opacity:0.4; pointer-events:none; border-color:rgba(255,255,255,0.2) !important; color:rgba(255,255,255,0.3) !important; }
 </style>
 </head>
 <body>
@@ -338,6 +347,9 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 
 <!-- GAME -->
 <div id="game" class="screen">
+  <!-- خلفية الملعب -->
+  <div id="pitch-bg"></div>
+
   <div class="top-bar">
     <div class="turn-badge" id="turnIndicator">Your Turn ⚡</div>
     <div class="top-name" id="topName">👤 You</div>
@@ -348,23 +360,14 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
     <div class="opp-right" id="opp-right-area" style="display:none"><div class="opp-right-inner" id="opp-right-inner"></div></div>
     <div class="opp-left" id="opp-left-area" style="display:none"><div class="opp-left-inner" id="opp-left-inner"></div></div>
 
-    <!-- 2-player split screen formation view -->
+    <!-- 2-player split screen — fills the pitch image -->
     <div id="two-player-layout" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;">
 
-      <!-- نصف الشاشة العلوي — الخصم (GK فوق → ATK قرب المنتصف) -->
-      <div id="opp-formation-half" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:3px 0 2px;background:linear-gradient(180deg,#1a6b1a 0%,#1e7a1e 100%);">
-        <!-- SVG ملعب الخصم -->
-        <svg id="pitch-svg-opp" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;" preserveAspectRatio="none">
-          <!-- خط المنتصف (أسفل) -->
-          <line x1="0" y1="100%" x2="100%" y2="100%" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
-          <!-- خط منطقة الجزاء -->
-          <rect x="20%" y="0" width="60%" height="30%" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-          <!-- دائرة منطقة وسط الملعب (ربع دائرة في الأسفل) -->
-          <path d="M 40% 100% A 10% 10% 0 0 0 60% 100%" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-        </svg>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 8px;margin-bottom:1px;position:relative;z-index:1;">
-          <div id="oppFormationName" style="font-size:10px;color:rgba(255,255,255,0.85);text-shadow:0 1px 3px rgba(0,0,0,0.7);">👤 Opponent</div>
-          <div id="oppHandCount" style="font-size:9px;color:rgba(255,255,255,0.6);">🃏 0</div>
+      <!-- نصف الشاشة العلوي — الخصم -->
+      <div id="opp-formation-half" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:2px 0 2px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 8px 1px;">
+          <div id="oppFormationName" style="font-size:10px;color:rgba(255,255,255,0.9);text-shadow:0 1px 4px rgba(0,0,0,0.9);font-family:Tajawal,sans-serif;font-weight:700;">👤 Opponent</div>
+          <div id="oppHandCount" style="font-size:9px;color:rgba(255,255,255,0.7);text-shadow:0 1px 3px #000;">🃏 0</div>
         </div>
         <div class="form-row" id="opp-row-GK"></div>
         <div class="form-row" id="opp-row-DEF"></div>
@@ -372,35 +375,26 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
         <div class="form-row" id="opp-row-ATK"></div>
       </div>
 
-      <!-- خط المنتصف مع البنك والحرق -->
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 8px;background:rgba(0,0,0,0.55);flex-shrink:0;border-top:2px solid rgba(255,255,255,0.3);border-bottom:2px solid rgba(255,255,255,0.3);position:relative;">
-        <!-- نقطة المنتصف -->
-        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.3);pointer-events:none;"></div>
-        <div class="deck-pile" id="deckPile" onclick="drawCard()" style="width:36px;height:50px;">
-          <div class="deck-num" id="deckCount" style="font-size:13px;">?</div>
-          <div class="deck-lbl" id="deckLbl" style="font-size:6px;">Cards</div>
-          <div class="deck-hint" id="deckHint" style="font-size:6px;">Tap</div>
-        </div>
-        <div class="discard-slot" id="discardSlot" style="width:36px;height:50px;">
-          <div class="discard-label" id="discardLabel" style="font-size:6px;">Discard</div>
-        </div>
-        <div id="drawCount" class="draw-remain" style="font-size:9px;">🃏 0 of 2</div>
-        <button class="abtn abtn-end" id="endTurnBtn" onclick="endTurn()" disabled style="font-size:11px;padding:5px 10px;">✅ End Turn</button>
-      </div>
+      <!-- خط المنتصف — بدون أي عناصر -->
+      <div style="height:3px;background:rgba(255,255,255,0.35);flex-shrink:0;"></div>
 
-      <!-- نصف الشاشة السفلي — أنا (ATK قرب المنتصف → GK أسفل) -->
-      <div id="my-formation-half" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:2px 0 3px;background:linear-gradient(180deg,#1e7a1e 0%,#1a6b1a 100%);">
-        <!-- SVG ملعبي -->
-        <svg id="pitch-svg-my" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;" preserveAspectRatio="none">
-          <!-- خط منطقة الجزاء -->
-          <rect x="20%" y="70%" width="60%" height="30%" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-          <!-- ربع دائرة المنتصف (أعلى) -->
-          <path d="M 40% 0% A 10% 10% 0 0 1 60% 0%" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-        </svg>
+      <!-- نصف الشاشة السفلي — أنا -->
+      <div id="my-formation-half" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:2px 0 2px;">
         <div class="form-row" id="my-row-ATK"></div>
         <div class="form-row" id="my-row-MID"></div>
         <div class="form-row" id="my-row-DEF"></div>
-        <div class="form-row" id="my-row-GK"></div>
+        <!-- صف GK + منطقة المحروق على يساره -->
+        <div class="form-row" id="my-row-GK-wrapper" style="flex:1;display:flex;align-items:center;justify-content:space-evenly;padding:0 6px;min-height:0;overflow:hidden;">
+          <!-- منطقة الكروت المحروقة والخاصة — يسار الحارس -->
+          <div id="burned-zone" style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:42px;">
+            <div style="font-size:7px;color:rgba(255,100,100,0.9);text-shadow:0 1px 3px #000;text-align:center;font-family:Tajawal,sans-serif;line-height:1;">🔥</div>
+            <div id="burned-stack" style="position:relative;width:38px;height:54px;"></div>
+          </div>
+          <!-- كروت GK -->
+          <div id="my-row-GK" style="display:flex;gap:4px;align-items:center;justify-content:center;flex:1;overflow:hidden;"></div>
+          <!-- spacer يمين عشان الحارس يبقى في المنتصف -->
+          <div style="min-width:42px;"></div>
+        </div>
       </div>
     </div>
 
@@ -446,7 +440,18 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
       </div>
     </div>
 
-    <!-- Hand area always visible at bottom -->
+    <!-- Action bar فوق كروت اليد — للـ 2-player -->
+    <div id="action-bar-2p" style="flex-shrink:0;background:rgba(0,0,0,0.65);padding:3px 8px;display:none;gap:6px;align-items:center;justify-content:center;border-top:1px solid rgba(255,255,255,0.12);">
+      <!-- زر سحب -->
+      <button id="deckPile" onclick="drawCard()" style="padding:5px 10px;border-radius:7px;border:1.5px solid rgba(0,229,255,0.5);background:rgba(0,20,40,0.8);color:#00e5ff;font-family:Orbitron,sans-serif;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;transition:opacity 0.2s;">
+        <span id="deckCount">?</span>
+        <span id="deckHint" style="font-size:9px;opacity:0.7;">🃏 Draw</span>
+      </button>
+      <!-- زر إنهاء الدور -->
+      <button class="abtn abtn-end" id="endTurnBtn" onclick="endTurn()" disabled style="font-size:11px;padding:5px 14px;">✅ End Turn</button>
+    </div>
+
+    <!-- كروت اليد دايماً في الأسفل -->
     <div class="hand-area" id="myHand" style="flex-shrink:0;"></div>
     <div class="name-bar" id="myNameBar">👤 You</div>
   </div>
@@ -1035,6 +1040,14 @@ function showCancelPopup(cardName, fromPlayer, cancelCardId) {
 }
 
 
+// كروت خاصة اتلعبت — بتظهر في منطقة المحروق
+window._lastSpecialCards = [];
+function trackSpecialPlayed(card){
+  if(!card) return;
+  window._lastSpecialCards.push({...card, burnedBy:'special', type:'special'});
+  if(window._lastSpecialCards.length>10) window._lastSpecialCards.shift();
+}
+
 function drawCard(){
   if(!isMyTurn) return;
   if(drawnThisTurn>=2) return showToast(t('maxDrawReached'),true);
@@ -1043,13 +1056,18 @@ function drawCard(){
 }
 
 function updateDrawCount(){
-  const el=document.getElementById('drawCount');
-  if(el) el.textContent=t('drawCount',drawnThisTurn);
+  // used for 3-4 player mode via deckPile (not used in 2p mode — handled in renderGame)
   const deck=document.getElementById('deckPile');
   const hint=document.getElementById('deckHint');
+  const dcEl=document.getElementById('deckCount');
+  if(dcEl) dcEl.textContent=deckCount;
   if(deck){
-    if(drawnThisTurn>=2){ deck.classList.add('drawn2'); if(hint) hint.textContent=t('deckHintDrawn'); }
-    else { deck.classList.remove('drawn2'); if(hint) hint.textContent=isMyTurn?t('deckHint'):''; }
+    deck.classList.toggle('drawn2', drawnThisTurn>=2);
+    if(hint){
+      if(!isMyTurn) hint.textContent='🃏';
+      else if(drawnThisTurn>=2) hint.textContent=t('deckHintDrawn');
+      else hint.textContent='🃏 Draw';
+    }
   }
 }
 
@@ -1063,7 +1081,8 @@ function endTurn() {
   if (!isMyTurn) return;
   socket.emit('end_turn');
   turnEnded = true;
-  document.getElementById('endTurnBtn').disabled = true;
+  const btn = document.getElementById('endTurnBtn') || document.getElementById('endTurnBtn2');
+  if(btn) btn.disabled = true;
 }
 
 
@@ -1086,19 +1105,35 @@ function renderGame(){
 
   if(numPlayers===2){
     document.getElementById('two-player-layout').style.display='flex';
+    const ab=document.getElementById('action-bar-2p');
+    if(ab) ab.style.display='flex';
     document.getElementById('opp-top-area').style.display='none';
     document.getElementById('middle-zone-old').style.display='none';
     document.getElementById('my-section-old').style.display='none';
 
     const endBtn=document.getElementById('endTurnBtn');
     if(endBtn) endBtn.disabled=!isMyTurn||turnEnded;
-    updateDrawCount();
-    renderDiscard();
+    // update deck count display
+    const dc=document.getElementById('deckCount');
+    if(dc) dc.textContent=deckCount;
+    // update draw hint
+    const hint=document.getElementById('deckHint');
+    if(hint){
+      if(!isMyTurn){ hint.textContent='🃏'; }
+      else if(drawnThisTurn>=2){ hint.textContent=t('deckHintDrawn'); }
+      else { hint.textContent='🃏 Draw'; }
+    }
+    // disable deck if drawn 2
+    const dp=document.getElementById('deckPile');
+    if(dp){ dp.classList.toggle('drawn2', drawnThisTurn>=2); }
+    renderBurnedZone();
     renderMyFormation();
     renderOppFormation();
   } else {
     // 3-4 players: show old layout
     document.getElementById('two-player-layout').style.display='none';
+    const ab=document.getElementById('action-bar-2p');
+    if(ab) ab.style.display='none';
     document.getElementById('opp-top-area').style.display='';
     document.getElementById('middle-zone-old').style.display='';
     document.getElementById('my-section-old').style.display='';
@@ -1113,12 +1148,59 @@ function renderGame(){
   renderMyHand();
 }
 
+// ====== BURNED ZONE (2-player) ======
+function renderBurnedZone(){
+  const stack=document.getElementById('burned-stack');
+  if(!stack) return;
+  stack.innerHTML='';
+  // اعرض آخر 3 كروت كـ stack (كل واحد متحرك شوية)
+  const items = [...gameBurnedPile, ...((window._lastSpecialCards)||[])];
+  const show = items.slice(-3);
+  show.forEach((card,i)=>{
+    const el=document.createElement('div');
+    el.className='bcard';
+    const offset = i*3;
+    el.style.cssText=`position:absolute;top:${offset}px;left:${offset}px;width:${38-offset}px;height:${54-offset}px;border-radius:5px;overflow:hidden;border:1.5px solid rgba(255,80,80,0.7);box-shadow:0 2px 6px rgba(0,0,0,0.8);background:${getCardBg(card)};z-index:${i+1};`;
+    if(card.type==='player'){
+      const imgSrc=getPlayerImage(card);
+      if(imgSrc){
+        const im=document.createElement('img');
+        im.src=imgSrc;
+        im.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;';
+        el.appendChild(im);
+      }
+      if(!card.joker&&card.number){
+        const n=document.createElement('span');
+        n.style.cssText='position:absolute;top:2px;left:2px;font-size:10px;font-weight:900;color:#fff;text-shadow:0 0 4px #000;z-index:5;font-family:Orbitron,sans-serif;';
+        n.textContent=card.number; el.appendChild(n);
+      }
+    } else {
+      // كارت خاص
+      const n=document.createElement('span');
+      n.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;color:#fff;text-align:center;padding:2px;font-family:Tajawal,sans-serif;font-weight:700;z-index:5;';
+      n.textContent=currentLang==='ar'?t(card.name):card.name; el.appendChild(n);
+    }
+    // علامة محروق
+    const fl=document.createElement('div');
+    fl.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(180,0,0,0.8);font-size:6px;text-align:center;color:#fff;padding:1px;z-index:6;';
+    fl.textContent=card.burnedBy==='red'?'🔴':(card.burnedBy==='yellow2'?'🟡🟡':(card.type==='special'?'⚡':'🔥'));
+    el.appendChild(fl);
+    stack.appendChild(el);
+  });
+  // عدد
+  if(items.length>0){
+    const cnt=document.createElement('div');
+    cnt.style.cssText='font-size:8px;color:rgba(255,120,120,0.9);text-align:center;font-family:Orbitron,sans-serif;font-weight:700;text-shadow:0 1px 3px #000;margin-top:2px;';
+    cnt.textContent=items.length;
+    stack.parentElement.appendChild(cnt);
+  }
+}
+
 function renderDiscard(){
-  const slotId = numPlayers===2 ? 'discardSlot' : 'discardSlot2';
-  const slot=document.getElementById(slotId);
+  // For 3-4 players only
+  const slot=document.getElementById('discardSlot2');
   if(!slot) return;
   slot.innerHTML='';
-  // لو في كروت محروقة — اعرض آخر واحدة بصورة اللاعب
   if(gameBurnedPile && gameBurnedPile.length>0){
     const last=gameBurnedPile[gameBurnedPile.length-1];
     const bc=document.createElement('div');
@@ -1212,7 +1294,9 @@ function makeFormCard(card, clickable, zone, oppData){
   } else if(clickable && isMyTurn){
     el.onclick=()=>{
       if(selectedCard&&selectedCard.type==='special'&&selectedCard.name==='Trash Player'){
+        const sc=selectedCard;
         socket.emit('play_special',{cardId:selectedCard.id,targetPlayerIdx:myIndex,targetCardId:card.id});
+        trackSpecialPlayed(sc);
         placedThisTurn++; selectedCard=null; renderGame();
       } else if(card.joker){
         const zones=['GK','DEF','MID','ATK'].filter(z=>z!==zone);
@@ -1587,27 +1671,33 @@ function handleOppCardClick(card,oppData){
   if(!selectedCard||selectedCard.type!=='special') return;
   const oppIdx=opponents.indexOf(oppData);
   const realIdx=oppIdx>=myIndex?oppIdx+1:oppIdx;
+  const sc=selectedCard;
   if(selectedCard.name==='Swap'){
     if(!mySwapCard) return showToast(t('selectYourCardFirst'),true);
     socket.emit('play_special',{cardId:selectedCard.id,targetPlayerIdx:realIdx,targetCardId:card.id,myCardId:mySwapCard.id});
+    trackSpecialPlayed(sc);
     mySwapCard=null;
     placedThisTurn++; selectedCard=null; renderGame();
   } else if(selectedCard.name==='Contract'){
     if(card.zone==='JOKER'){
-      const sc=selectedCard, ri=realIdx, ci=card.id;
+      const ri=realIdx, ci=card.id;
       showZonePopup(['GK','DEF','MID','ATK'],(z)=>{
         socket.emit('play_special',{cardId:sc.id,targetPlayerIdx:ri,targetCardId:ci,targetZone:z});
+        trackSpecialPlayed(sc);
         placedThisTurn++; selectedCard=null; renderGame();
       });
     } else {
       socket.emit('play_special',{cardId:selectedCard.id,targetPlayerIdx:realIdx,targetCardId:card.id,targetZone:card.zone});
+      trackSpecialPlayed(sc);
       placedThisTurn++; selectedCard=null; renderGame();
     }
   } else if(selectedCard.name==='Loan'){
     socket.emit('play_special',{cardId:selectedCard.id,targetPlayerIdx:realIdx,targetCardId:card.id,targetZone:card.zone==='JOKER'?'ATK':card.zone});
+    trackSpecialPlayed(sc);
     placedThisTurn++; selectedCard=null; renderGame();
   } else {
     socket.emit('play_special',{cardId:selectedCard.id,targetPlayerIdx:realIdx,targetCardId:card.id});
+    trackSpecialPlayed(sc);
     placedThisTurn++; selectedCard=null; renderGame();
   }
 }
