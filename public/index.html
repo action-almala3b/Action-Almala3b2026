@@ -147,7 +147,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 #pitch-bg {
   position:absolute; inset:0; width:100%; height:100%;
   background-image: url('images/pitch.png');
-  background-size: cover;
+  background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center center;
   z-index:0; pointer-events:none;
@@ -276,7 +276,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 .card-type-desc { color: rgba(255,255,255,0.6); font-size: clamp(12px, 2.5vw, 14px); line-height: 1.6; }
 
 /* Formation rows — كروت موزعة بالعرض */
-.form-row { display:flex; gap:4px; align-items:center; justify-content:space-evenly; flex:1; min-height:0; overflow:hidden; padding:0 6px; position:relative; z-index:2; }
+.form-row { display:flex; gap:8px; align-items:center; justify-content:space-evenly; flex:1; min-height:0; overflow:hidden; padding:0 10px; position:relative; z-index:2; }
 .form-card { width:38px; height:54px; border-radius:5px; position:relative; overflow:hidden; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.3); cursor:pointer; transition:transform 0.1s; box-shadow:0 2px 8px rgba(0,0,0,0.7); }
 .form-card:active { transform:scale(0.93); }
 .form-card.selected-form { border-color:#00e5ff !important; box-shadow:0 0 12px rgba(0,229,255,0.8); }
@@ -1187,52 +1187,52 @@ function renderGame(){
 
 // ====== BURNED ZONE (2-player) ======
 function renderBurnedZone(){
-  const stack=document.getElementById('burned-stack');
-  if(!stack) return;
-  stack.innerHTML='';
-  // اعرض آخر 3 كروت كـ stack (كل واحد متحرك شوية)
-  const items = [...gameBurnedPile, ...((window._lastSpecialCards)||[])];
-  const show = items.slice(-3);
-  show.forEach((card,i)=>{
-    const el=document.createElement('div');
-    el.className='bcard';
-    const offset = i*3;
-    el.style.cssText=`position:absolute;top:${offset}px;left:${offset}px;width:${38-offset}px;height:${54-offset}px;border-radius:5px;overflow:hidden;border:1.5px solid rgba(255,80,80,0.7);box-shadow:0 2px 6px rgba(0,0,0,0.8);background:${getCardBg(card)};z-index:${i+1};`;
-    if(card.type==='player'){
-      const imgSrc=getPlayerImage(card);
-      if(imgSrc){
-        const im=document.createElement('img');
-        im.src=imgSrc;
-        im.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;';
-        el.appendChild(im);
-      }
-      if(!card.joker&&card.number){
-        const n=document.createElement('span');
-        n.style.cssText='position:absolute;top:2px;left:2px;font-size:10px;font-weight:900;color:#fff;text-shadow:0 0 4px #000;z-index:5;font-family:Orbitron,sans-serif;';
-        n.textContent=card.number; el.appendChild(n);
-      }
-    } else {
-      // كارت خاص
-      const n=document.createElement('span');
-      n.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;color:#fff;text-align:center;padding:2px;font-family:Tajawal,sans-serif;font-weight:700;z-index:5;';
-      n.textContent=currentLang==='ar'?t(card.name):card.name; el.appendChild(n);
+  const zone=document.getElementById('burned-zone');
+  if(!zone) return;
+  // امسح كل محتوى المنطقة وابنيها من جديد
+  zone.innerHTML='<div style="font-size:7px;color:rgba(255,100,100,0.9);text-shadow:0 1px 3px #000;text-align:center;font-family:Tajawal,sans-serif;line-height:1;margin-bottom:2px;">🔥</div>';
+  const stackEl=document.createElement('div');
+  stackEl.id='burned-stack';
+  stackEl.style.cssText='position:relative;width:38px;height:54px;';
+  zone.appendChild(stackEl);
+
+  const items=[...gameBurnedPile,...((window._lastSpecialCards)||[])];
+  if(items.length===0) return;
+
+  // اعرض آخر كارت بس (علوي الـ stack)
+  const card=items[items.length-1];
+  const el=document.createElement('div');
+  el.style.cssText=`position:absolute;inset:0;border-radius:5px;overflow:hidden;border:1.5px solid rgba(255,80,80,0.7);box-shadow:0 2px 6px rgba(0,0,0,0.8);background:${getCardBg(card)};`;
+  if(card.type==='player'){
+    const imgSrc=getPlayerImage(card);
+    if(imgSrc){
+      const im=document.createElement('img');
+      im.src=imgSrc;
+      im.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;';
+      el.appendChild(im);
     }
-    // علامة محروق
-    const fl=document.createElement('div');
-    fl.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(180,0,0,0.8);font-size:6px;text-align:center;color:#fff;padding:1px;z-index:6;';
-    fl.textContent=card.burnedBy==='red'?'🔴':(card.burnedBy==='yellow2'?'🟡🟡':(card.type==='special'?'⚡':'🔥'));
-    el.appendChild(fl);
-    stack.appendChild(el);
-  });
-  // عدد — نمسح أي عداد قديم أولاً
-  const oldCnt=stack.parentElement.querySelector('.burned-cnt');
-  if(oldCnt) oldCnt.remove();
+    if(!card.joker&&card.number){
+      const n=document.createElement('span');
+      n.style.cssText='position:absolute;top:2px;left:2px;font-size:10px;font-weight:900;color:#fff;text-shadow:0 0 4px #000;z-index:5;font-family:Orbitron,sans-serif;';
+      n.textContent=card.number; el.appendChild(n);
+    }
+  } else {
+    const n=document.createElement('span');
+    n.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;color:#fff;text-align:center;padding:2px;font-family:Tajawal,sans-serif;font-weight:700;z-index:5;';
+    n.textContent=currentLang==='ar'?t(card.name):card.name; el.appendChild(n);
+  }
+  const fl=document.createElement('div');
+  fl.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(180,0,0,0.8);font-size:6px;text-align:center;color:#fff;padding:1px;z-index:6;';
+  fl.textContent=card.burnedBy==='red'?'🔴':(card.burnedBy==='yellow2'?'🟡🟡':(card.type==='special'?'⚡':'🔥'));
+  el.appendChild(fl);
+  stackEl.appendChild(el);
+
+  // عدد الكروت المحروقة
   if(items.length>0){
     const cnt=document.createElement('div');
-    cnt.className='burned-cnt';
-    cnt.style.cssText='font-size:8px;color:rgba(255,120,120,0.9);text-align:center;font-family:Orbitron,sans-serif;font-weight:700;text-shadow:0 1px 3px #000;margin-top:2px;';
+    cnt.style.cssText='font-size:9px;color:rgba(255,120,120,1);text-align:center;font-family:Orbitron,sans-serif;font-weight:700;text-shadow:0 1px 3px #000;margin-top:2px;';
     cnt.textContent=items.length;
-    stack.parentElement.appendChild(cnt);
+    zone.appendChild(cnt);
   }
 }
 
