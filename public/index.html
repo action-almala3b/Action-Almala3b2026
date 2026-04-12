@@ -112,7 +112,8 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 
 /* ===== GAME SCREENS ===== */
 .screen { display:none; width:100%; height:100%; position:absolute; top:0; left:0; }
-.screen.active { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; }
+.screen.active { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#game.active { align-items:stretch; justify-content:flex-start; }
 
 /* LOBBY */
 #lobby { background:#000000; padding:30px 24px; gap:20px; }
@@ -1138,6 +1139,7 @@ function renderGame(){
   }
 
   if(numPlayers===2){
+    const pb=document.getElementById('pitch-bg'); if(pb) pb.style.display='';
     document.getElementById('two-player-layout').style.display='flex';
     const ab=document.getElementById('action-bar-2p');
     if(ab) ab.style.display='flex';
@@ -1167,13 +1169,14 @@ function renderGame(){
     renderMyFormation();
     renderOppFormation();
   } else {
-    // 3-4 players: show old layout
+    // 3-4 players: show old layout, hide pitch background
     document.getElementById('two-player-layout').style.display='none';
     const ab=document.getElementById('action-bar-2p');
     if(ab) ab.style.display='none';
     document.getElementById('opp-top-area').style.display='';
     document.getElementById('middle-zone-old').style.display='';
     document.getElementById('my-section-old').style.display='';
+    const pb=document.getElementById('pitch-bg'); if(pb) pb.style.display='none';
 
     const endBtn2=document.getElementById('endTurnBtn2');
     if(endBtn2){
