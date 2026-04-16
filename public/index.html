@@ -750,12 +750,14 @@ function showVastAd(callback) {
   }
 
   // جلب الـ VAST XML
-  fetch('https://corsproxy.io/?' + encodeURIComponent(VAST_URL))
+  fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(VAST_URL))
     .then(r => {
       if (!r.ok) { alert('HTTP Error: ' + r.status); finish(); throw new Error('http'); }
-      return r.text();
+      return r.json();
     })
-    .then(xml => {
+    .then(data => {
+      const xml = data.contents;
+      if (!xml) { alert('VAST: empty response'); finish(); return; }
       const parser = new DOMParser();
       const doc = parser.parseFromString(xml, 'text/xml');
 
@@ -835,7 +837,6 @@ function showVastAd(callback) {
       };
     })
     .catch((err) => {
-      // لو فشل الـ fetch — اظهر الـ error وكمل
       alert('VAST Error: ' + (err.message || err));
       finish();
     });
