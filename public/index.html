@@ -302,6 +302,19 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 <!-- BANNER AD - shown outside game -->
 
 
+<!-- VAST AD OVERLAY -->
+<div id="vast-overlay" style="display:none;position:fixed;inset:0;background:#000;z-index:99999;flex-direction:column;align-items:center;justify-content:center;">
+  <div id="vast-ad-label" style="position:absolute;top:10px;left:12px;font-size:11px;color:rgba(255,255,255,0.5);font-family:Orbitron,sans-serif;letter-spacing:1px;">📢 Ad</div>
+  <video id="vast-video" style="display:none;max-width:100%;max-height:80vh;width:100%;object-fit:contain;cursor:pointer;" playsinline webkit-playsinline></video>
+  <!-- عداد Skip -->
+  <div id="vast-skip-countdown" style="display:none;position:absolute;bottom:20px;right:16px;align-items:center;gap:8px;">
+    <div style="font-size:12px;color:rgba(255,255,255,0.5);font-family:Tajawal,sans-serif;" id="vast-skip-label-text"></div>
+    <div style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:4px 10px;font-size:13px;color:#fff;font-family:Orbitron,sans-serif;" id="vast-skip-timer">5</div>
+  </div>
+  <!-- زر Skip -->
+  <button id="vast-skip" style="display:none;position:absolute;bottom:20px;right:16px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;padding:7px 18px;border-radius:8px;cursor:pointer;letter-spacing:1px;"></button>
+</div>
+
 <!-- LANGUAGE SELECTION SCREEN -->
 <div id="lang-screen">
   <div class="lang-choose-text">
@@ -319,10 +332,10 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
   <div><div class="logo-title">Action <span>Almala3b</span></div><div class="logo-sub" id="logoSub">ONLINE CARD GAME</div></div>
   <div class="input-group">
     <input class="inp" id="playerName" placeholder="Your Name" maxlength="15">
-    <button class="btn btn-primary" onclick="createRoom()" id="createRoomBtn">🏟️ Create Room</button>
+    <button class="btn btn-primary" onclick="createRoomWithAd()" id="createRoomBtn">🏟️ Create Room</button>
     <div class="or-divider" id="orDivider">— or —</div>
     <input class="inp" id="joinCode" placeholder="Room Code (6 digits)" maxlength="6" inputmode="numeric">
-    <button class="btn btn-outline" onclick="joinRoom()" id="joinRoomBtn">🔗 Join Room</button>
+    <button class="btn btn-outline" onclick="joinRoomWithAd()" id="joinRoomBtn">🔗 Join Room</button>
   </div>
 </div>
 
@@ -706,25 +719,145 @@ function t(key, ...args) {
   return text;
 }
 
-// ===== AD HELPERS =====
-const SMART_LINK = 'https://faithfuloccasion.com/dGmUFBzOd.G/N/vHZ/G/UY/reAmA9ruxZPU-lgkYPgT/YA5HN/jkEa5WM/z/catmNHjKk/2wMyTvky0cMQQr';
-
-function triggerSmartLink() {
-  try { window.open(SMART_LINK, '_blank'); } catch(e) {}
-}
+// ===== VAST AD PLAYER =====
+const VAST_URL = 'https://faithfuloccasion.com/dGmUFBzOd.G/N/vHZ/G/UY/reAmA9ruxZPU-lgkYPgT/YA5HN/jkEa5WM/z/catmNHjKk/2wMyTvky0cMQQr';
 
 function hideBannerAd() {}
 function showBannerAd() {}
 
+// بعد ما الإعلان يخلص أو يتخطى — نفذ الـ callback
+function showVastAd(callback) {
+  const overlay = document.getElementById('vast-overlay');
+  const videoEl = document.getElementById('vast-video');
+  const skipBtn = document.getElementById('vast-skip');
+  const skipTimer = document.getElementById('vast-skip-timer');
+  const adLabel = document.getElementById('vast-ad-label');
+
+  // إظهار الـ overlay بدون فيديو (انتظار)
+  overlay.style.display = 'flex';
+  videoEl.style.display = 'none';
+  skipBtn.style.display = 'none';
+  adLabel.textContent = currentLang === 'ar' ? 'جار تحميل الإعلان...' : 'Loading ad...';
+
+  let done = false;
+  function finish() {
+    if (done) return;
+    done = true;
+    overlay.style.display = 'none';
+    videoEl.pause();
+    videoEl.src = '';
+    if (callback) callback();
+  }
+
+  // جلب الـ VAST XML
+  fetch('https://corsproxy.io/?' + encodeURIComponent(VAST_URL))
+    .then(r => r.text())
+    .then(xml => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xml, 'text/xml');
+
+      // استخرج روابط الفيديو — نفضل mp4 أو webm
+      const mediaFiles = [...doc.querySelectorAll('MediaFile')];
+      let videoSrc = null;
+      // أولوية: mp4 أو h264، وإلا أول حاجة
+      const mp4 = mediaFiles.find(m => (m.getAttribute('type')||'').includes('mp4') || (m.getAttribute('codec')||'').includes('h264'));
+      const webm = mediaFiles.find(m => (m.getAttribute('type')||'').includes('webm'));
+      const chosen = mp4 || webm || mediaFiles[0];
+      if (chosen) {
+        videoSrc = chosen.textContent.trim().replace(/\s/g,'');
+        // شيل CDATA لو موجود
+        videoSrc = videoSrc.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim();
+      }
+
+      // استخرج ClickThrough للضغط على الإعلان
+      const clickThrough = doc.querySelector('ClickThrough');
+      const clickUrl = clickThrough ? clickThrough.textContent.trim().replace(/^<!\[CDATA\[/,'').replace(/\]\]>$/,'').trim() : null;
+
+      if (!videoSrc) {
+        // مفيش فيديو — افتح اللينك في تاب جديد وكمل
+        if (clickUrl) try { window.open(clickUrl, '_blank'); } catch(e) {}
+        finish();
+        return;
+      }
+
+      // شغل الفيديو
+      adLabel.textContent = currentLang === 'ar' ? '📢 إعلان' : '📢 Ad';
+      videoEl.src = videoSrc;
+      videoEl.style.display = 'block';
+      videoEl.muted = false;
+      videoEl.volume = 0.5;
+
+      // لو الفيديو ما اشتغلش — جرب muted
+      videoEl.play().catch(() => {
+        videoEl.muted = true;
+        videoEl.play().catch(() => finish());
+      });
+
+      // زر Skip بعد 5 ثواني
+      let countdown = 5;
+      skipBtn.style.display = 'none';
+      const countdownDiv = document.getElementById('vast-skip-countdown');
+      const skipLblEl = document.getElementById('vast-skip-label-text');
+      if (skipLblEl) skipLblEl.textContent = currentLang === 'ar' ? 'تخطي بعد' : 'Skip in';
+      skipTimer.textContent = countdown;
+      countdownDiv.style.display = 'flex';
+
+      const timerInterval = setInterval(() => {
+        countdown--;
+        skipTimer.textContent = countdown;
+        if (countdown <= 0) {
+          clearInterval(timerInterval);
+          countdownDiv.style.display = 'none';
+          skipBtn.textContent = currentLang === 'ar' ? '⏩ تخطي' : '⏩ Skip Ad';
+          skipBtn.style.display = 'block';
+        }
+      }, 1000);
+      // إظهار العداد
+      skipTimer.parentElement.style.display = 'flex';
+
+      // لما الفيديو يخلص
+      videoEl.onended = () => {
+        clearInterval(timerInterval);
+        finish();
+      };
+
+      // الضغط على الإعلان
+      videoEl.onclick = () => {
+        if (clickUrl) try { window.open(clickUrl, '_blank'); } catch(e) {}
+      };
+
+      skipBtn.onclick = () => {
+        clearInterval(timerInterval);
+        finish();
+      };
+    })
+    .catch(() => {
+      // لو فشل الـ fetch — كمل بدون إعلان
+      finish();
+    });
+}
+
 function playAgainWithAd() {
-  triggerSmartLink();
-  location.reload();
+  showVastAd(() => location.reload());
+}
+
+function createRoomWithAd() {
+  showVastAd(() => createRoom());
+}
+
+function joinRoomWithAd() {
+  showVastAd(() => joinRoom());
 }
 
 function selectLanguage(lang) {
   currentLang = lang;
   document.getElementById('lang-screen').classList.add('hidden');
   document.getElementById('lobby').classList.add('active');
+  // تحديث نصوص الإعلان
+  const skipBtn = document.getElementById('vast-skip');
+  const skipLbl = document.getElementById('vast-skip-label-text');
+  if (skipBtn) skipBtn.textContent = lang === 'ar' ? '⏩ تخطي' : '⏩ Skip Ad';
+  if (skipLbl) skipLbl.textContent = lang === 'ar' ? 'تخطي بعد' : 'Skip in';
   updateUILanguage();
   preloadAllImages();
 }
