@@ -1,8 +1,4 @@
 <!DOCTYPE html>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9145485545403794"
-     crossorigin="anonymous"></script>
-     <meta name="google-site-verification" content="mprv1jbKBH9nDdvRPDv-Vu6K9bTsTPGnLFuFr9Hvnkk" />
-
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
@@ -304,18 +300,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 <body>
 
 <!-- BANNER AD - shown outside game -->
-<div id="bannerAdContainer" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:9998;display:flex;justify-content:center;align-items:center;">
-  <script>
-    atOptions = {
-      'key' : '54d672d826783cb880b809c387863e53',
-      'format' : 'iframe',
-      'height' : 50,
-      'width' : 320,
-      'params' : {}
-    };
-  </script>
-  <script src="https://www.highperformanceformat.com/54d672d826783cb880b809c387863e53/invoke.js"></script>
-</div>
+
 
 <!-- LANGUAGE SELECTION SCREEN -->
 <div id="lang-screen">
@@ -722,24 +707,17 @@ function t(key, ...args) {
 }
 
 // ===== AD HELPERS =====
-function triggerPopupAd() {
-  try {
-    window.open('https://www.profitablecpmratenetwork.com/fmzteue2i?key=aaf0c2752644d63b595da8ea767f6c60', '_blank');
-  } catch(e) {}
+const SMART_LINK = 'https://faithfuloccasion.com/dGmUFBzOd.G/N/vHZ/G/UY/reAmA9ruxZPU-lgkYPgT/YA5HN/jkEa5WM/z/catmNHjKk/2wMyTvky0cMQQr';
+
+function triggerSmartLink() {
+  try { window.open(SMART_LINK, '_blank'); } catch(e) {}
 }
 
-function hideBannerAd() {
-  const banner = document.getElementById('bannerAdContainer');
-  if (banner) banner.style.display = 'none';
-}
-
-function showBannerAd() {
-  const banner = document.getElementById('bannerAdContainer');
-  if (banner) banner.style.display = 'flex';
-}
+function hideBannerAd() {}
+function showBannerAd() {}
 
 function playAgainWithAd() {
-  triggerPopupAd();
+  triggerSmartLink();
   location.reload();
 }
 
@@ -825,7 +803,6 @@ function createRoom(){
   const name=document.getElementById('playerName').value.trim();
   if(!name) return showToast(t('enterName'),true);
   myName=name;
-  triggerPopupAd();
   socket.emit('create_room',{playerName:name});
   isRoomOwner=true;
 }
@@ -835,7 +812,6 @@ function joinRoom(){
   const code=document.getElementById('joinCode').value.trim().toUpperCase();
   if(!name||!code) return showToast(t('enterNameAndCode'),true);
   myName=name;
-  triggerPopupAd();
   socket.emit('join_room',{code,playerName:name});
   isRoomOwner=false;
 }
@@ -1014,6 +990,17 @@ socket.on('special_pending',({cardName,fromPlayer,targetPlayer,targetIsMe})=>{
 
 socket.on('special_cancelled',({by})=>showToast(t('specialCancelled',by)));
 
+// مزامنة الكروت الخاصة المستخدمة في الثنائي (تظهر للاثنين)
+socket.on('special_played_broadcast',({card})=>{
+  if(!card) return;
+  // تأكد إن الكارت مش موجود بالفعل
+  if(!window._lastSpecialCards.find(c=>c.id===card.id)){
+    window._lastSpecialCards.push({...card, burnedBy:'special', type:'special'});
+    if(window._lastSpecialCards.length>10) window._lastSpecialCards.shift();
+  }
+  if(numPlayers===2) renderBurnedZone();
+});
+
 // Offside: لما دورك يتخطى
 socket.on('your_turn_start',()=>{
   // reset مضمون لما دورك يبدأ
@@ -1073,8 +1060,15 @@ function showCancelPopup(cardName, fromPlayer, cancelCardId) {
 window._lastSpecialCards = [];
 function trackSpecialPlayed(card){
   if(!card) return;
-  window._lastSpecialCards.push({...card, burnedBy:'special', type:'special'});
-  if(window._lastSpecialCards.length>10) window._lastSpecialCards.shift();
+  const entry={...card, burnedBy:'special', type:'special'};
+  if(!window._lastSpecialCards.find(c=>c.id===card.id)){
+    window._lastSpecialCards.push(entry);
+    if(window._lastSpecialCards.length>10) window._lastSpecialCards.shift();
+  }
+  // في الثنائي: ابعت للسيرفر يعمل broadcast للخصم كمان
+  if(numPlayers===2){
+    socket.emit('broadcast_special_played',{card:entry});
+  }
 }
 
 function drawCard(){
@@ -1146,6 +1140,8 @@ function renderGame(){
     document.getElementById('opp-top-area').style.display='none';
     document.getElementById('middle-zone-old').style.display='none';
     document.getElementById('my-section-old').style.display='none';
+    // إظهار منطقة المحروق في الثنائي
+    const bz=document.getElementById('burned-zone'); if(bz) bz.style.display='flex';
 
     const endBtn=document.getElementById('endTurnBtn');
     if(endBtn){
@@ -1177,6 +1173,8 @@ function renderGame(){
     document.getElementById('middle-zone-old').style.display='';
     document.getElementById('my-section-old').style.display='';
     const pb=document.getElementById('pitch-bg'); if(pb) pb.style.display='none';
+    // إخفاء منطقة المحروق في الثلاثي والرباعي
+    const bz=document.getElementById('burned-zone'); if(bz) bz.style.display='none';
 
     const endBtn2=document.getElementById('endTurnBtn2');
     if(endBtn2){
@@ -1478,7 +1476,7 @@ function makeSideField(opp){
     (opp.field[zone]||[]).forEach(card=>{
       // استخدم نفس تصميم mini-card بدل mini-card-xs
       const el=document.createElement('div');
-      el.style.cssText='width:28px;height:40px;border-radius:4px;position:relative;overflow:hidden;flex-shrink:0;border:1px solid rgba(255,255,255,0.15);background:'+getCardBg(card)+';cursor:pointer;';
+      el.style.cssText='width:38px;height:54px;border-radius:5px;position:relative;overflow:hidden;flex-shrink:0;border:1px solid rgba(255,255,255,0.15);background:'+getCardBg(card)+';cursor:pointer;';
       if(card.captain) el.style.borderColor='rgba(255,215,0,0.6)';
       // صورة اللاعب
       const imgSrc=getPlayerImage(card);
@@ -1738,7 +1736,19 @@ function handleOppCardClick(card,oppData){
       placedThisTurn++; selectedCard=null; renderGame();
     }
   } else if(selectedCard.name==='Loan'){
-    socket.emit('play_special',{cardId:selectedCard.id,targetPlayerIdx:realIdx,targetCardId:card.id,targetZone:card.zone==='JOKER'?'ATK':card.zone});
+    // تحقق إن الملعب مش ممتلئ قبل ما تحسب اللعبة
+    const myFieldCount=Object.values(myField).reduce((s,z)=>s+z.length,0);
+    const targetZone=card.zone==='JOKER'?'ATK':card.zone;
+    const ZONE_LIMITS={GK:1,DEF:5,MID:4,ATK:3};
+    if(myFieldCount>=11){
+      showToast(currentLang==='ar'?'الملعب ممتلئ (11 لاعب)! ما ينفعش إعارة':'Field is full (11 players)! Cannot loan',true);
+      return; // لا تحسب لعبة، لا تمسح selectedCard
+    }
+    if(myField[targetZone]&&myField[targetZone].length>=ZONE_LIMITS[targetZone]){
+      showToast(currentLang==='ar'?`المركز ممتلئ (${t(targetZone)})! ما ينفعش إعارة`:`Zone full (${t(targetZone)})! Cannot loan`,true);
+      return; // لا تحسب لعبة
+    }
+    socket.emit('play_special',{cardId:selectedCard.id,targetPlayerIdx:realIdx,targetCardId:card.id,targetZone});
     trackSpecialPlayed(sc);
     placedThisTurn++; selectedCard=null; renderGame();
   } else {
