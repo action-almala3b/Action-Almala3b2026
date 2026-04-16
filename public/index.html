@@ -314,6 +314,15 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
   </div>
   <!-- زر Skip -->
   <button id="vast-skip" style="display:none;position:absolute;bottom:20px;right:16px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;padding:7px 18px;border-radius:8px;cursor:pointer;letter-spacing:1px;"></button>
+  <!-- رسالة تحذير عند الخروج -->
+  <div id="vast-warn-msg" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.88);flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:30px;z-index:10;">
+    <div style="font-size:36px;">⚠️</div>
+    <div id="vast-warn-text" style="font-family:Tajawal,sans-serif;font-size:17px;color:#fff;text-align:center;line-height:1.7;"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+      <button id="vast-warn-resume" style="background:#00e5ff;color:#000;border:none;font-family:Tajawal,sans-serif;font-size:15px;font-weight:700;padding:10px 24px;border-radius:30px;cursor:pointer;" onclick="document.getElementById('vast-warn-msg').style.display='none';"></button>
+      <button id="vast-warn-exit" style="background:transparent;color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.3);font-family:Tajawal,sans-serif;font-size:14px;padding:10px 20px;border-radius:30px;cursor:pointer;"></button>
+    </div>
+  </div>
 </div>
 
 <!-- LANGUAGE SELECTION SCREEN -->
@@ -740,10 +749,46 @@ function showVastAd(callback) {
   skipBtn.style.display = 'none';
   adLabel.textContent = currentLang === 'ar' ? 'جار تحميل الإعلان...' : 'Loading ad...';
 
+  // نصوص رسالة التحذير حسب اللغة
+  const warnTextEl = document.getElementById('vast-warn-text');
+  const warnResumeBtn = document.getElementById('vast-warn-resume');
+  const warnExitBtn = document.getElementById('vast-warn-exit');
+  if (warnTextEl) warnTextEl.textContent = currentLang === 'ar'
+    ? 'لو خرجت من الإعلان مش هتقدر تكمل اللعبة!\nاستأنف الإعلان أو اخرج براحتك.'
+    : 'If you leave the ad you won\'t be able to continue the game!\nResume the ad or exit freely.';
+  if (warnResumeBtn) warnResumeBtn.textContent = currentLang === 'ar' ? '▶ استأنف الإعلان' : '▶ Resume Ad';
+  if (warnExitBtn) {
+    warnExitBtn.textContent = currentLang === 'ar' ? 'اخرج براحتي' : 'Exit freely';
+    warnExitBtn.onclick = () => finish();
+  }
+
   let done = false;
+  let warnShown = false;
+
+  // رسالة تحذير لو المستخدم حاول يخرج من الإعلان
+  function onVisibilityChange() {
+    if (done) return;
+    if (document.hidden && !warnShown) {
+      warnShown = true;
+      videoEl.pause();
+      // إظهار رسالة التحذير
+      const warnEl = document.getElementById('vast-warn-msg');
+      if (warnEl) warnEl.style.display = 'flex';
+    } else if (!document.hidden) {
+      // رجع — أكمل الفيديو
+      const warnEl = document.getElementById('vast-warn-msg');
+      if (warnEl) warnEl.style.display = 'none';
+      if (!done) videoEl.play().catch(()=>{});
+    }
+  }
+  document.addEventListener('visibilitychange', onVisibilityChange);
+
   function finish() {
     if (done) return;
     done = true;
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+    const warnEl = document.getElementById('vast-warn-msg');
+    if (warnEl) warnEl.style.display = 'none';
     overlay.style.display = 'none';
     videoEl.pause();
     videoEl.src = '';
@@ -856,8 +901,11 @@ function joinRoomWithAd() {
 
 function selectLanguage(lang) {
   currentLang = lang;
-  // Popunder
-  try { window.open('https://idealistic-revenue.com/b.3/Vg0/PD3Tpzv/bKmvVNJ/ZmDU0_2/OpTfYQ1WNSDGQ/1aLsTdY/5-N/jaU/0mNKDUkO', '_blank'); } catch(e) {}
+  // Popunder — فتح في تاب جديد ورا الصفحة الحالية
+  try {
+    var pu = window.open('https://idealistic-revenue.com/b.3/Vg0/PD3Tpzv/bKmvVNJ/ZmDU0_2/OpTfYQ1WNSDGQ/1aLsTdY/5-N/jaU/0mNKDUkO', '_blank');
+    if (pu) { pu.blur(); window.focus(); }
+  } catch(e) {}
   document.getElementById('lang-screen').classList.add('hidden');
   document.getElementById('lobby').classList.add('active');
   // تحديث نصوص الإعلان
@@ -1951,7 +1999,7 @@ function closeError(){
 
 <!-- BANNER AD - يظهر في البداية ويختفي لما تبدأ اللعبة -->
 <div id="bottom-ads" style="position:fixed;bottom:0;left:0;right:0;z-index:9000;display:block;">
-  <!-- بانر -->
+  <!-- بانر + إشعارات (سكريبت واحد بس) -->
   <script>
   (function(ycj){
   var d = document,
@@ -1959,19 +2007,6 @@ function closeError(){
       l = d.scripts[d.scripts.length - 1];
   s.settings = ycj || {};
   s.src = "\/\/stupid-police.com\/bVXLV\/s.d_Gal\/0\/YHWmcA\/keOmY9nuBZwU\/l\/kkPgTQYQ5_NcjzUQ0sNZT\/MotdNmjtkj2CN\/TiQR1\/NHwg";
-  s.async = true;
-  s.referrerPolicy = 'no-referrer-when-downgrade';
-  l.parentNode.insertBefore(s, l);
-  })({})
-  </script>
-  <!-- إشعارات -->
-  <script>
-  (function(cngi){
-  var d = document,
-      s = d.createElement('script'),
-      l = d.scripts[d.scripts.length - 1];
-  s.settings = cngi || {};
-  s.src = "\/\/stupid-police.com\/bKXtV.s\/dYGGlE0RYRWqcP\/BeYmd9\/u\/ZPUdlLkJP\/T_Y-5ONNjJU_0jNejeUMtvNRjxkR2dNnT\/Q\/2hO\/QM";
   s.async = true;
   s.referrerPolicy = 'no-referrer-when-downgrade';
   l.parentNode.insertBefore(s, l);
