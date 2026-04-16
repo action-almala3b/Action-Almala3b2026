@@ -751,7 +751,10 @@ function showVastAd(callback) {
 
   // جلب الـ VAST XML
   fetch('https://corsproxy.io/?' + encodeURIComponent(VAST_URL))
-    .then(r => r.text())
+    .then(r => {
+      if (!r.ok) { alert('HTTP Error: ' + r.status); finish(); throw new Error('http'); }
+      return r.text();
+    })
     .then(xml => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(xml, 'text/xml');
@@ -831,8 +834,9 @@ function showVastAd(callback) {
         finish();
       };
     })
-    .catch(() => {
-      // لو فشل الـ fetch — كمل بدون إعلان
+    .catch((err) => {
+      // لو فشل الـ fetch — اظهر الـ error وكمل
+      alert('VAST Error: ' + (err.message || err));
       finish();
     });
 }
