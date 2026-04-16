@@ -750,14 +750,9 @@ function showVastAd(callback) {
   }
 
   // جلب الـ VAST XML
-  fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(VAST_URL))
-    .then(r => {
-      if (!r.ok) { alert('HTTP Error: ' + r.status); finish(); throw new Error('http'); }
-      return r.json();
-    })
-    .then(data => {
-      const xml = data.contents;
-      if (!xml) { alert('VAST: empty response'); finish(); return; }
+  fetch('/vast')
+    .then(r => r.text())
+    .then(xml => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(xml, 'text/xml');
 
@@ -836,8 +831,8 @@ function showVastAd(callback) {
         finish();
       };
     })
-    .catch((err) => {
-      alert('VAST Error: ' + (err.message || err));
+    .catch(() => {
+      // لو فشل الـ fetch — كمل بدون إعلان
       finish();
     });
 }
