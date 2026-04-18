@@ -946,9 +946,8 @@ function showVastAd(callback) {
 
 function playAgainWithAd() {
   showVastAd(() => {
-    // إخفاء win screen وإظهار waiting
     document.getElementById('win-screen').classList.remove('show');
-    showScreen('waiting');
+    socket.emit('reset_room');
   });
 }
 
@@ -1099,6 +1098,17 @@ socket.on('players_update',({players})=>{
     waitMsg.textContent = t('waitingMsg');
     startBtn.style.display = 'none';
   }
+});
+
+socket.on('room_reset', ({ players }) => {
+  document.getElementById('win-screen').classList.remove('show');
+  const startBtn = document.getElementById('startGameBtn');
+  if (startBtn) startBtn.style.display = isRoomOwner && players.length >= 2 ? 'block' : 'none';
+  const waitMsg = document.getElementById('waitingMsg');
+  if (waitMsg) waitMsg.textContent = players.length >= 2 ? t('waitingMsgReady') : t('waitingMsg');
+  const list = document.getElementById('playersList');
+  if (list) list.innerHTML = players.map((p,i) => i===0 ? `<div class="player-chip">${t('host',p)}</div>` : `<div class="player-chip">${t('player',p)}</div>`).join('');
+  showScreen('waiting');
 });
 
 socket.on('game_started', () => {
