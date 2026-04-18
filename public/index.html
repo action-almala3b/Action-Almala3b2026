@@ -268,6 +268,15 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
 .pending-banner { position:fixed; top:10px; left:50%; transform:translateX(-50%); background:rgba(255,165,0,0.2); border:1px solid orange; border-radius:20px; padding:6px 16px; font-size:12px; color:orange; z-index:400; display:none; }
 .pending-banner.show { display:block; }
 
+/* ===== AD / NOTIFICATION FIXES ===== */
+/* منع تكرار الإشعارات — إظهار واحد بس */
+#bottom-ads { position:fixed !important; bottom:0 !important; left:0 !important; right:0 !important; z-index:8000 !important; }
+/* أي push notification container يجي من الإعلان */
+div[id*="push"], div[class*="push"], div[id*="notify"], div[class*="notify"],
+div[id*="notif"], div[class*="notif"] {
+  z-index:8500 !important;
+}
+
 /* Legacy - keep for any leftover refs */
 .emoji-large { font-size: clamp(18px, 4vw, 24px); }
 .formation-text { font-weight: 700; color: #ffffff; }
@@ -319,7 +328,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000000; font-f
     <div style="font-size:36px;">⚠️</div>
     <div id="vast-warn-text" style="font-family:Tajawal,sans-serif;font-size:17px;color:#fff;text-align:center;line-height:1.7;"></div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
-      <button id="vast-warn-resume" style="background:#00e5ff;color:#000;border:none;font-family:Tajawal,sans-serif;font-size:15px;font-weight:700;padding:10px 24px;border-radius:30px;cursor:pointer;" onclick="document.getElementById('vast-warn-msg').style.display='none';"></button>
+      <button id="vast-warn-resume" style="background:#00e5ff;color:#000;border:none;font-family:Tajawal,sans-serif;font-size:15px;font-weight:700;padding:10px 24px;border-radius:30px;cursor:pointer;" onclick="document.getElementById('vast-warn-msg').style.display='none'; var v=document.getElementById('vast-video'); if(v && !v.ended) v.play().catch(()=>{});"></button>
       <button id="vast-warn-exit" style="background:transparent;color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.3);font-family:Tajawal,sans-serif;font-size:14px;padding:10px 20px;border-radius:30px;cursor:pointer;"></button>
     </div>
   </div>
@@ -743,10 +752,22 @@ function showVastAd(callback) {
   const skipTimer = document.getElementById('vast-skip-timer');
   const adLabel = document.getElementById('vast-ad-label');
 
-  // إظهار الـ overlay بدون فيديو (انتظار)
+  // إظهار الـ overlay فوراً (قبل تحميل الفيديو)
   overlay.style.display = 'flex';
   videoEl.style.display = 'none';
   skipBtn.style.display = 'none';
+  // spinner انتظار
+  let spinnerEl = document.getElementById('vast-spinner');
+  if (!spinnerEl) {
+    spinnerEl = document.createElement('div');
+    spinnerEl.id = 'vast-spinner';
+    spinnerEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:vastSpin 0.8s linear infinite;';
+    const styleEl = document.createElement('style');
+    styleEl.textContent = '@keyframes vastSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}';
+    document.head.appendChild(styleEl);
+    overlay.appendChild(spinnerEl);
+  }
+  spinnerEl.style.display = 'block';
   adLabel.textContent = currentLang === 'ar' ? 'جار تحميل الإعلان...' : 'Loading ad...';
 
   // نصوص رسالة التحذير حسب اللغة
@@ -763,19 +784,17 @@ function showVastAd(callback) {
   }
 
   let done = false;
-  let warnShown = false;
 
   // رسالة تحذير لو المستخدم حاول يخرج من الإعلان
   function onVisibilityChange() {
     if (done) return;
-    if (document.hidden && !warnShown) {
-      warnShown = true;
+    if (document.hidden) {
       videoEl.pause();
       // إظهار رسالة التحذير
       const warnEl = document.getElementById('vast-warn-msg');
       if (warnEl) warnEl.style.display = 'flex';
-    } else if (!document.hidden) {
-      // رجع — أكمل الفيديو
+    } else {
+      // رجع — إخفاء التحذير وأكمل الفيديو
       const warnEl = document.getElementById('vast-warn-msg');
       if (warnEl) warnEl.style.display = 'none';
       if (!done) videoEl.play().catch(()=>{});
@@ -787,15 +806,24 @@ function showVastAd(callback) {
     if (done) return;
     done = true;
     document.removeEventListener('visibilitychange', onVisibilityChange);
+    window.removeEventListener('beforeunload', onBeforeUnload);
     const warnEl = document.getElementById('vast-warn-msg');
     if (warnEl) warnEl.style.display = 'none';
+    const sp = document.getElementById('vast-spinner');
+    if (sp) sp.style.display = 'none';
     overlay.style.display = 'none';
     videoEl.pause();
     videoEl.src = '';
     if (callback) callback();
   }
 
-  // جلب الـ VAST XML
+  // رسالة تحذير لو حاول يغلق الصفحة أو يروح لينك تاني
+  function onBeforeUnload(e) {
+    if (done) return;
+    e.preventDefault();
+    e.returnValue = '';
+  }
+  window.addEventListener('beforeunload', onBeforeUnload);
   fetch('/vast')
     .then(r => r.text())
     .then(xml => {
@@ -829,7 +857,12 @@ function showVastAd(callback) {
       // شغل الفيديو
       adLabel.textContent = currentLang === 'ar' ? '📢 إعلان' : '📢 Ad';
       videoEl.src = videoSrc;
-      videoEl.style.display = 'block';
+      // إظهار الفيديو لما يكون جاهز للتشغيل
+      videoEl.oncanplay = () => {
+        const sp = document.getElementById('vast-spinner');
+        if (sp) sp.style.display = 'none';
+        videoEl.style.display = 'block';
+      };
       videoEl.muted = false;
       videoEl.volume = 0.5;
 
@@ -903,8 +936,14 @@ function selectLanguage(lang) {
   currentLang = lang;
   // Popunder — فتح في تاب جديد ورا الصفحة الحالية
   try {
-    var pu = window.open('https://idealistic-revenue.com/b.3/Vg0/PD3Tpzv/bKmvVNJ/ZmDU0_2/OpTfYQ1WNSDGQ/1aLsTdY/5-N/jaU/0mNKDUkO', '_blank');
-    if (pu) { pu.blur(); window.focus(); }
+    var a = document.createElement('a');
+    a.href = 'https://idealistic-revenue.com/b.3/Vg0/PD3Tpzv/bKmvVNJ/ZmDU0_2/OpTfYQ1WNSDGQ/1aLsTdY/5-N/jaU/0mNKDUkO';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); window.focus(); }, 100);
   } catch(e) {}
   document.getElementById('lang-screen').classList.add('hidden');
   document.getElementById('lobby').classList.add('active');
@@ -1046,11 +1085,12 @@ socket.on('players_update',({players})=>{
   }
 });
 
-socket.on('game_started', function() {
+socket.on('game_started', () => {
   const bottomAds = document.getElementById('bottom-ads');
   if (bottomAds) bottomAds.style.display = 'none';
+  hideBannerAd();
+  showScreen('game');
 });
-socket.on('game_started',()=>{hideBannerAd();showScreen('game');});
 
 socket.on('game_state',({myHand:h,myField:f,myYellows:y,opponents:o,currentTurn:ct,myIndex:mi,deckCount:dc,firstTurn:ft,discardPile:dp,burnedPile:bp,numPlayers:np})=>{
   myHand=h; myField=f; myYellows=y; opponents=o; myIndex=mi; deckCount=dc; firstTurn=ft;
@@ -1997,20 +2037,23 @@ function closeError(){
 
 </script>
 
-<!-- BANNER AD - يظهر في البداية ويختفي لما تبدأ اللعبة -->
-<div id="bottom-ads" style="position:fixed;bottom:0;left:0;right:0;z-index:9000;display:block;">
-  <!-- بانر + إشعارات (سكريبت واحد بس) -->
+<!-- BANNER AD - يظهر في اللوبي ويختفي لما تبدأ اللعبة -->
+<div id="bottom-ads" style="position:fixed;bottom:0;left:0;right:0;z-index:8000;display:block;pointer-events:auto;">
   <script>
-  (function(ycj){
-  var d = document,
-      s = d.createElement('script'),
-      l = d.scripts[d.scripts.length - 1];
-  s.settings = ycj || {};
-  s.src = "\/\/stupid-police.com\/bVXLV\/s.d_Gal\/0\/YHWmcA\/keOmY9nuBZwU\/l\/kkPgTQYQ5_NcjzUQ0sNZT\/MotdNmjtkj2CN\/TiQR1\/NHwg";
-  s.async = true;
-  s.referrerPolicy = 'no-referrer-when-downgrade';
-  l.parentNode.insertBefore(s, l);
-  })({})
+  // منع تكرار تحميل السكريبت
+  if (!window._bannerAdLoaded) {
+    window._bannerAdLoaded = true;
+    (function(ycj){
+    var d = document,
+        s = d.createElement('script'),
+        l = d.scripts[d.scripts.length - 1];
+    s.settings = ycj || {};
+    s.src = "\/\/stupid-police.com\/bVXLV\/s.d_Gal\/0\/YHWmcA\/keOmY9nuBZwU\/l\/kkPgTQYQ5_NcjzUQ0sNZT\/MotdNmjtkj2CN\/TiQR1\/NHwg";
+    s.async = true;
+    s.referrerPolicy = 'no-referrer-when-downgrade';
+    l.parentNode.insertBefore(s, l);
+    })({})
+  }
   </script>
 </div>
 
